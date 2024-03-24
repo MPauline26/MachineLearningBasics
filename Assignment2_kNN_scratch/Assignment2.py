@@ -1,45 +1,94 @@
 # import packages
-import sklearn.datasets 
-#from sklearn.neighbors import KNeighborsClassifier
+from sklearn.datasets import make_classification
+from sklearn.model_selection import KFold
 import pandas as pd
-import matplotlib.pyplot as plt
 from math import sqrt
 import numpy as np
 
-X,y = sklearn.datasets.make_classification(n_samples=10,n_features=4)
-
-#plt.style.use('seaborn-v0_8')
-#plt.scatter(X[:,0], X[:,1], c=y, marker= '*',s=100,edgecolors='black')
-#plt.show()
-
-data = pd.DataFrame(X)
-data.to_excel('sample_data.xlsx', sheet_name='sheet1', index=False)
-print("0:",data.iloc[0])
-print(data)
-
-def euclidean_distance(row1, row2):
+# calculate distance of base row to other rows
+# compute sum of distances for each column
+# return sqrt because euclidean distance
+def kNN_distance(row_base, row_oth):
     distance = 0.0
-    for i in range(len(row1)):
-        distance += (row1[i] - row2[i])**2
-    return sqrt(distance)
+    for i in range(len(row_base)): 
+        distance += (row_base[i] - row_oth[i])**2
+    return sqrt(distance) 
 
-# Locate the most similar neighbors
-def get_neighbors(train, test_row, num_neighbors):
-    print("----- To test:\n", test_row)
-    distances = pd.DataFrame(columns = ['Class', 'Distance'])
+# calls kNN_distance() for each row and save into DataFrame distance_all
+# sort resulting DataFrame by distance
+# take only k-nearest neighbors
+# predict Class by taking most occuring class among k-nearest neighbors in train-data
+def kNN(train_X_data, train_y_data, test_row, k_num):
+
     i = 0
-    for train_row in train:
-        dist = euclidean_distance(test_row, train_row)
-        conc = pd.DataFrame({'Class' : y[i], 'Distance' : dist}, index=[i])
-        distances = pd.concat([distances, conc],ignore_index = False)
-        i = i+1
-    distances.sort_values(by=['Distance'], inplace=True)
-    print("Distances:\n", distances,"\n")
-    distances = distances[distances.Distance > 0]
-    neighbors = distances.head(3)
-    print("neighbors\n",neighbors,"\n")
-    prediction = neighbors['Class'].value_counts().idxmax()
-    print("prediction\n",prediction,"\n")    
-    return neighbors
+    distance_all = pd.DataFrame(columns = ['Class', 'Distance'])
 
-neighbors = get_neighbors(X, X[3], 3)
+    for train_row in train_X_data:
+        distance = kNN_distance(test_row, train_row)
+        conc = pd.DataFrame({'Class' : train_y_data[i], 'Distance' : distance}, index=[i])
+        distance_all = pd.concat([distance_all, conc], ignore_index = False)
+        i += 1
+
+    distance_all.sort_values(by=['Distance'], inplace=True)
+
+    neighbors = distance_all.head(k_num)
+    prediction = neighbors['Class'].value_counts().idxmax()
+
+    return prediction
+
+# calls kNN() for each row in test-data and makes prediction for class
+# compare predicted value to actual value in test data
+# calculate accuracy ratio: proportion of correctly predicted occurences to total number
+def accuracy(train_X_data, train_y_data, test_X_data, test_y_data, k_num = 3):
+
+    j = 0
+    accuracy_list = pd.DataFrame(columns = ['Actual', 'Predicted'])
+
+    for row in test_X_data:
+        predicted_value = kNN(train_X_data, train_y_data, test_X_data[j], k_num)
+        conc = pd.DataFrame({'Actual' : test_y_data[j], 'Predicted' : predicted_value}, index=[j])
+        accuracy_list = pd.concat([accuracy_list, conc],ignore_index = False)
+        j += 1
+
+    accuracy_list['Correctly_Predicted'] = np.where(accuracy_list['Actual'] == accuracy_list['Predicted'], True, False)
+    accuracy_ratio = accuracy_list["Correctly_Predicted"].mean()
+
+    return accuracy_ratio
+
+# set constants
+KNEIGHBOR_NUM = 7
+
+SEED_DATASET = 20220919
+ROWS_NUM = 100
+FEATURES_NUM = 4
+
+SEED_KFOLD = 20220919
+KFOLD_NUM = 10
+
+# create dataset
+X,y = make_classification(n_samples=ROWS_NUM,n_features=FEATURES_NUM,random_state=SEED_DATASET)
+
+# call 10-fold cross validation
+kf = KFold(n_splits=KFOLD_NUM, shuffle=True, random_state=SEED_KFOLD)
+
+# Calculate accuracy ratio for each evaluation, save in accuracy_ratio_sample
+# Compute average for final performance estimate
+accuracy_ratio_sample = pd.DataFrame(columns = ['Train', 'Test','Accuracy_Ratio'])
+m = 0
+
+for train_index, test_index in kf.split(X):
+    X_train, X_test = X[train_index], X[test_index]
+    y_train, y_test = y[train_index], y[test_index]
+
+    accuracy_ratio = accuracy(X_train, y_train, X_test, y_test, KNEIGHBOR_NUM)
+    conc = pd.DataFrame({'Train' : [train_index], 'Test' : [test_index], 'Accuracy_Ratio' : accuracy_ratio}, index=[m])
+    accuracy_ratio_sample = pd.concat([accuracy_ratio_sample, conc],ignore_index = False)
+    m += 1
+
+accuracy_ratio = accuracy_ratio_sample["Accuracy_Ratio"].mean()
+print(accuracy_ratio_sample)
+print("Final performance estimate: ", accuracy_ratio)
+
+# using k = 3, no feature scaling - final performance estimate: 0.91
+# using k = 5, no feature scaling - final performance estimate: 0.92
+# using k = 7, no feature scaling - final performance estimate: 0.89
