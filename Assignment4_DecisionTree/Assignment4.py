@@ -4,27 +4,23 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # import packages
 from sklearn.datasets import make_classification
-from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
-from math import sqrt
 import pandas as pd
 import numpy as np
 
 # set constants
-SEED_DATASET = 20220919
-ROWS_NUM = 100
-FEATURES_NUM = 4
+ROWS_NUM = 500 # size of sample (train and test)
+FEATURES_NUM = 5 # number of features, also needs to be adapted in row 20
 
 # create dataset
-X,y = make_classification(n_samples=ROWS_NUM,n_features=FEATURES_NUM,random_state=SEED_DATASET, class_sep=2)
+X,y = make_classification(n_samples=ROWS_NUM,n_features=FEATURES_NUM, class_sep=2)
 data_X = np.array(X)
 data_y = np.array(y)
-data = pd.DataFrame(np.append(data_X ,data_y.reshape(-1,1),axis=1), columns=['VAR1','VAR2','VAR3','VAR4','target'])
+data = pd.DataFrame(np.append(data_X ,data_y.reshape(-1,1),axis=1), columns=['VAR1','VAR2','VAR3','VAR4','VAR5', 'target'])
 data.target = data.target.astype('int')
 
 # splitting data into test and train
 train, test = train_test_split(data, test_size=0.2)
-print(train.shape, test.shape)
 
 def gini_calculation(data_input, var, value, target):
 
@@ -39,7 +35,7 @@ def gini_calculation(data_input, var, value, target):
     # count total frequency of each bucket
     total = data_input.value_counts(["temp_var"]).sort_index()
     total = total.to_numpy()
-    total = np.resize(total, (1,2))
+    total = np.resize(total, (1, 2))
 
     # calculate gini of each bucket
     gini_indiv = (1 - np.sum((count/total)**2, axis = 0))
@@ -82,12 +78,16 @@ class2 = train[train[gini_list.iloc[0,0]]>=gini_list.iloc[0,1]].target.mode()
 # class in first branch (<  than x): class1
 # class in first branch (>= than x): class2
 
-# validation
-data_test = data.copy()
-data_test['test'] = np.where(data_test[gini_list.iloc[0,0]]<gini_list.iloc[0,1], class1, class2)
-print(data_test.head())
+# apply split on test sample, make predictions and calculate accuracy 
+test['prediction'] = np.where(test[gini_list.iloc[0,0]]<gini_list.iloc[0,1], class1, class2)
+test['Correctly_Predicted'] = np.where(test['target'] == test['prediction'], True, False)
+accuracy_ratio = test["Correctly_Predicted"].mean()
 
-data_test['Correctly_Predicted'] = np.where(data_test['target'] == data_test['test'], True, False)
-accuracy_ratio = data_test["Correctly_Predicted"].mean()
-
-print(accuracy_ratio)
+# print results
+print("DT is split by ", gini_list.iloc[0,0], " at ", gini_list.iloc[0,1])
+print("First branch is: ", class1.to_string(index=False))
+print("Second branch is: ", class2.to_string(index=False))
+print("Gini is: ", gini_list.iloc[0,2])
+print("Accuracy ratio on test sample is: ", accuracy_ratio)
+if not test[test['Correctly_Predicted']==False].empty:
+    print("Incorrectly categorized: \n", test[test['Correctly_Predicted']==False].head())
