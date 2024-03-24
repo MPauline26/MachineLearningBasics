@@ -18,26 +18,28 @@ print("0:",data.iloc[0])
 print(data)
 
 def euclidean_distance(row1, row2):
-	distance = 0.0
-	for i in range(len(row1)):
-		distance += (row1[i] - row2[i])**2
-	return sqrt(distance)
+    distance = 0.0
+    for i in range(len(row1)):
+        distance += (row1[i] - row2[i])**2
+    return sqrt(distance)
 
 # Locate the most similar neighbors
 def get_neighbors(train, test_row, num_neighbors):
-	distances = list()
-	for train_row in train:
-		dist = euclidean_distance(test_row, train_row)
-		print("Distance - test:", dist,"\n")
-		distances.append((train_row, dist))
-		print("Distances - test:", distances,"\n")
-	distances.sort(key=lambda tup: tup[1])
-	print("Distances",distances,"\n")
-	neighbors = list()
-	for i in range(num_neighbors):
-		neighbors.append((distances[i][0],y[i]))
-	return neighbors
+    print("----- To test:\n", test_row)
+    distances = pd.DataFrame(columns = ['Class', 'Distance'])
+    i = 0
+    for train_row in train:
+        dist = euclidean_distance(test_row, train_row)
+        conc = pd.DataFrame({'Class' : y[i], 'Distance' : dist}, index=[i])
+        distances = pd.concat([distances, conc],ignore_index = False)
+        i = i+1
+    distances.sort_values(by=['Distance'], inplace=True)
+    print("Distances:\n", distances,"\n")
+    distances = distances[distances.Distance > 0]
+    neighbors = distances.head(3)
+    print("neighbors\n",neighbors,"\n")
+    prediction = neighbors['Class'].value_counts().idxmax()
+    print("prediction\n",prediction,"\n")    
+    return neighbors
 
-neighbors = get_neighbors(X, X[0], 3)
-for neighbor in neighbors:
-	print("knn:",neighbor,"\n")
+neighbors = get_neighbors(X, X[3], 3)
