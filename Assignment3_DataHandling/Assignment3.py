@@ -9,6 +9,12 @@ import seaborn as sns
 import numpy as np
 from sklearn.impute import KNNImputer
 
+# to see all info of dataframe
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', None)
+
 # import data, skip first row "this is a header", delimiter is semicolon
 data = pd.read_csv('/Users/meikeepauline/Desktop/Data/MLB_Ass3_dataa.csv',sep=';', header=None, skiprows=1)
 
