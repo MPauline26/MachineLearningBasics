@@ -14,7 +14,7 @@ def kNN_distance(row_base, row_oth):
         distance += (row_base[i] - row_oth[i])**2
     return sqrt(distance) 
 
-# calls kNN_distance() for each row and save into DataFrame distance_all
+# call kNN_distance() for each row and save into DataFrame distance_all
 # sort resulting DataFrame by distance
 # take only k-nearest neighbors
 # predict Class by taking most occuring class among k-nearest neighbors in train-data
@@ -36,7 +36,7 @@ def kNN(train_X_data, train_y_data, test_row, k_num):
 
     return prediction
 
-# calls kNN() for each row in test-data and makes prediction for class
+# calls kNN() for each row in test-data and makes class prediction
 # compare predicted value to actual value in test data
 # calculate accuracy ratio: proportion of correctly predicted occurences to total number
 def accuracy(train_X_data, train_y_data, test_X_data, test_y_data, k_num = 3):
@@ -56,7 +56,7 @@ def accuracy(train_X_data, train_y_data, test_X_data, test_y_data, k_num = 3):
     return accuracy_ratio
 
 # set constants
-KNEIGHBOR_NUM = 7
+KNEIGHBOR_NUM = 5
 
 SEED_DATASET = 20220919
 ROWS_NUM = 100
@@ -65,10 +65,17 @@ FEATURES_NUM = 4
 SEED_KFOLD = 20220919
 KFOLD_NUM = 10
 
+SCALING = False
+
 # create dataset
 X,y = make_classification(n_samples=ROWS_NUM,n_features=FEATURES_NUM,random_state=SEED_DATASET)
 
-# call 10-fold cross validation
+if SCALING == True :
+    print("Mean of each column: ", np.mean(X, axis=0))
+    print("St. dev of each column: ",np.std(X, axis=0), "\n")
+    X = (X-np.mean(X, axis=0))/np.std(X, axis=0)
+
+# call k-fold cross validation
 kf = KFold(n_splits=KFOLD_NUM, shuffle=True, random_state=SEED_KFOLD)
 
 # Calculate accuracy ratio for each evaluation, save in accuracy_ratio_sample
@@ -87,8 +94,16 @@ for train_index, test_index in kf.split(X):
 
 accuracy_ratio = accuracy_ratio_sample["Accuracy_Ratio"].mean()
 print(accuracy_ratio_sample)
+
 print("Final performance estimate: ", accuracy_ratio)
+
+# Sample size: 4 Features, 100 observations
+# 10 fold cross validation
 
 # using k = 3, no feature scaling - final performance estimate: 0.91
 # using k = 5, no feature scaling - final performance estimate: 0.92
 # using k = 7, no feature scaling - final performance estimate: 0.89
+
+# using k = 3, standardized feature scaling - final performance estimate: 0.93
+# using k = 5, standardized feature scaling - final performance estimate: 0.93
+# using k = 7, standardized feature scaling - final performance estimate: 0.91
